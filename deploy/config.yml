@@ -1,0 +1,9 @@
+# Registry CLI config
+services:
+  registry:
+    rpcEndpoint: 'https://laconicd-mainnet-1.laconic.com'
+    gqlEndpoint: 'https://laconicd-mainnet-1.laconic.com/api'
+    userKey:
+    bondId: 230cfedda15e78edc8986dfcb870e1b618f65c56e38d2735476d2a8cb3f25e38
+    chainId: laconic-mainnet
+    gasPrice: 0.001alnt
