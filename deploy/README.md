@@ -36,7 +36,7 @@
 
   ```bash
   # Create env for deployment from example env
-  cp ../env.example .app.env
+  cp ../.env.example .app.env
 
   # Fill in the required values
   nano .app.env

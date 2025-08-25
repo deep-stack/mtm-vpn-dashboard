@@ -1,12 +1,12 @@
 {
-  "name": "Laconic Test Progressive Web App",
-  "short_name": "Test PWA",
-  "theme_color": "#ffffff",
-  "background_color": "#004740",
-  "display": "fullscreen",
+  "name": "MTM VPN Admin Dashboard",
+  "short_name": "MTM Admin",
+  "theme_color": "#3B82F6",
+  "background_color": "#F9FAFB",
+  "display": "standalone",
   "orientation": "portrait",
   "scope": "/",
-  "start_url": "/",
+  "start_url": "/dashboard",
   "icons": [
     {
       "src": "icons/icon-72x72.png",
