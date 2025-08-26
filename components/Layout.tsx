@@ -7,8 +7,6 @@ import {
   ExclamationTriangleIcon,
   WalletIcon,
   CloudArrowDownIcon,
-  ChatBubbleLeftRightIcon,
-  ArrowRightOnRectangleIcon,
   Bars3Icon,
   XMarkIcon,
 } from '@heroicons/react/24/outline';
@@ -17,9 +15,7 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
   { name: 'Transactions', href: '/dashboard/transactions', icon: ArrowsRightLeftIcon },
   { name: 'Failed Transactions', href: '/dashboard/failed', icon: ExclamationTriangleIcon },
-  { name: 'Account Balances', href: '/dashboard/balances', icon: WalletIcon },
   { name: 'App Downloads', href: '/dashboard/downloads', icon: CloudArrowDownIcon },
-  { name: 'Support', href: '/dashboard/support', icon: ChatBubbleLeftRightIcon },
 ];
 
 interface LayoutProps {
@@ -29,22 +25,6 @@ interface LayoutProps {
 export default function Layout({ children }: LayoutProps) {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [adminUser, setAdminUser] = useState<{ name: string; email: string } | null>(null);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const userData = localStorage.getItem('adminUser');
-      if (userData) {
-        setAdminUser(JSON.parse(userData));
-      }
-    }
-  }, []);
-
-  const handleLogout = () => {
-    localStorage.removeItem('isAdminAuthenticated');
-    localStorage.removeItem('adminUser');
-    router.push('/login');
-  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -152,23 +132,6 @@ export default function Layout({ children }: LayoutProps) {
                 </h2>
               </div>
               
-              <div className="flex items-center space-x-4">
-                {adminUser && (
-                  <div className="flex items-center space-x-3">
-                    <div className="text-sm">
-                      <p className="text-gray-900 font-medium">{adminUser.name}</p>
-                      <p className="text-gray-500">{adminUser.email}</p>
-                    </div>
-                    <button
-                      onClick={handleLogout}
-                      className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full"
-                      title="Logout"
-                    >
-                      <ArrowRightOnRectangleIcon className="h-5 w-5" />
-                    </button>
-                  </div>
-                )}
-              </div>
             </div>
           </div>
         </div>
