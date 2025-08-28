@@ -182,12 +182,6 @@ export const mockSwapTransactions: SwapTransaction[] = [
     createdAt: new Date('2025-08-24T10:55:00Z')
   },
   {
-    id: 4,
-    ethAmount: '0.075',
-    error: 'execution reverted: slippage too high',
-    createdAt: new Date('2025-08-24T09:25:00Z')
-  },
-  {
     id: 5,
     ethAmount: '0.03',
     error: 'replacement transaction underpriced',
