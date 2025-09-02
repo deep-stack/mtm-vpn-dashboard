@@ -52,9 +52,6 @@
   # NYM chain RPC endpoint
   NEXT_PUBLIC_NYX_RPC_URL=https://rpc.nymtech.net
 
-  # GitHub releases API endpoint
-  GITHUB_RELEASES_URL=https://git.vdb.to/api/v1/repos/cerc-io/mtm-vpn-client-public/releases
-
   # ETH chain RPC endpoint
   ETH_RPC_URL=
   ```

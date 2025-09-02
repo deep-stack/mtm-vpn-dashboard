@@ -40,9 +40,6 @@ See [deployment instructions](./deploy/README.md) for detailed deployment steps 
 
    # ETH chain RPC endpoint (for balance checking)
    ETH_RPC_URL=https://eth.rpc.laconic.com/your-api-key
-
-   # GitHub releases API endpoint
-   GITHUB_RELEASES_URL=https://git.vdb.to/api/v1/repos/cerc-io/mtm-vpn-client-public/releases
    ```
 
 1. **Start the development server**:
