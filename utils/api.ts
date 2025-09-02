@@ -38,6 +38,30 @@ export interface TransactionsResponse {
   };
 }
 
+export interface SwapData {
+  id: number;
+  ethAmount: string;
+  transactionHash?: string;
+  error?: string | null;
+  createdAt: string;
+  bridgeTransaction?: {
+    id: number;
+    nymAmount: string;
+    ethTransactionHash?: string;
+    error?: string | null;
+  };
+}
+
+export interface SwapsResponse {
+  swaps: SwapData[];
+  totalCount: number;
+  pagination: {
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -107,6 +131,22 @@ export const dashboardApi = {
     const query = searchParams.toString();
     const endpoint = `/api/transactions/conversions${query ? `?${query}` : ''}`;
     return apiRequest<TransactionsResponse>(endpoint);
+  },
+
+  // Get swaps with pagination and filtering
+  getSwaps: (params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+  }): Promise<SwapsResponse> => {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.set('page', params.page.toString());
+    if (params?.limit) searchParams.set('limit', params.limit.toString());
+    if (params?.status) searchParams.set('status', params.status);
+    
+    const query = searchParams.toString();
+    const endpoint = `/api/swaps${query ? `?${query}` : ''}`;
+    return apiRequest<SwapsResponse>(endpoint);
   },
 
 };

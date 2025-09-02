@@ -41,9 +41,19 @@
   ```bash
   # Create env for deployment from example env
   cp ../.env.example .app.env
+  ```
 
-  # Fill in the required values
-  nano .app.env
+- Update the env variables in `.app.env`
+
+  ```bash
+  # Public endpoint of mtm-to-nym-service
+  NEXT_PUBLIC_MTM_SERVICE_URL=https://mtm-vpn.laconic.com
+
+  # NYM chain RPC endpoint
+  NEXT_PUBLIC_NYX_RPC_URL=https://rpc.nymtech.net
+
+  # ETH chain RPC endpoint
+  ETH_RPC_URL=
   ```
 
 ## Run

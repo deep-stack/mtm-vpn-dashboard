@@ -8,12 +8,14 @@ import {
   XCircleIcon, 
   CloudArrowDownIcon,
   WalletIcon,
+  ArrowTopRightOnSquareIcon,
 } from '@heroicons/react/24/outline';
 import { StargateClient } from '@cosmjs/stargate';
 import { Decimal } from '@cosmjs/math';
 
 import Layout from '../../components/Layout';
 import dashboardApi, { ApiError, DashboardStats, TransactionData } from '../../utils/api';
+import { getExplorerUrl } from '../../utils/explorer';
 
 interface BalanceData {
   address: string;
@@ -358,14 +360,36 @@ export default function Dashboard() {
                         )}
                       </div>
                       <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">
-                          {`${transaction.transactionHash.slice(0, 8)}...${transaction.transactionHash.slice(-8)}`}
+                        <div className="text-sm font-medium text-gray-900 flex items-center space-x-2">
+                          <a
+                            href={getExplorerUrl(transaction.transactionHash, 'solana')}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-800 font-mono"
+                          >
+                            {`${transaction.transactionHash.slice(0, 8)}...${transaction.transactionHash.slice(-8)}`}
+                          </a>
+                          <ArrowTopRightOnSquareIcon className="h-4 w-4 text-gray-400" />
                         </div>
                         <div className="text-sm text-gray-500">
-                          {transaction.error ? 
-                            `Error: ${transaction.error.substring(0, 40)}...` :
+                          {transaction.error ? (
+                            `Error: ${transaction.error.substring(0, 40)}...`
+                          ) : transaction.nymTransactionHash ? (
+                            <div className="flex items-center space-x-2">
+                              <span>NYM:</span>
+                              <a
+                                href={getExplorerUrl(transaction.nymTransactionHash, 'nym')}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:text-blue-800 font-mono text-xs"
+                              >
+                                {`${transaction.nymTransactionHash.slice(0, 8)}...${transaction.nymTransactionHash.slice(-8)}`}
+                              </a>
+                              <ArrowTopRightOnSquareIcon className="h-3 w-3 text-gray-400" />
+                            </div>
+                          ) : (
                             `From: ${transaction.fromAddress.slice(0, 8)}...${transaction.fromAddress.slice(-8)}`
-                          }
+                          )}
                         </div>
                       </div>
                     </div>
