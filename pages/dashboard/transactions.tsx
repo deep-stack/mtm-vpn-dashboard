@@ -5,10 +5,12 @@ import {
   ArrowTopRightOnSquareIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  ClipboardDocumentIcon,
 } from '@heroicons/react/24/outline';
 import Layout from '../../components/Layout';
 import dashboardApi, { TransactionData, SwapData } from '../../utils/api';
 import { getExplorerUrl } from '../../utils/explorer';
+import { copyToClipboard } from '../../utils/clipboard';
 
 export default function Transactions() {
   const [mtmCurrentPage, setMtmCurrentPage] = useState(1);
@@ -171,8 +173,17 @@ export default function Transactions() {
 
         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
           {tx.error ? (
-            <div className="max-w-xs truncate text-red-600" title={tx.error}>
-              {tx.error}
+            <div className="max-w-xs flex items-start space-x-2">
+              <div className="truncate text-red-600 flex-1" title={tx.error}>
+                {tx.error}
+              </div>
+              <button
+                onClick={() => copyToClipboard(tx.error!, 'MTM conversion error')}
+                className="flex-shrink-0 p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
+                title="Copy full error message"
+              >
+                <ClipboardDocumentIcon className="h-4 w-4" />
+              </button>
             </div>
           ) : '-'}
         </td>
@@ -269,8 +280,35 @@ export default function Transactions() {
 
         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
           {hasError ? (
-            <div className="max-w-xs truncate text-red-600" title={swap.error || bridgeTransaction?.error || ''}>
-              {swap.error || bridgeTransaction?.error || 'Unknown error'}
+            <div className="max-w-xs space-y-1">
+              {swap.error && (
+                <div className="flex items-start space-x-2">
+                  <div className="text-red-600 truncate flex-1" title={`Swap Error: ${swap.error}`}>
+                    <span className="font-medium">Swap:</span> {swap.error.length > 30 ? `${swap.error.substring(0, 30)}...` : swap.error}
+                  </div>
+                  <button
+                    onClick={() => copyToClipboard(swap.error!, 'Swap error')}
+                    className="flex-shrink-0 p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
+                    title="Copy full swap error message"
+                  >
+                    <ClipboardDocumentIcon className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+              {bridgeTransaction?.error && (
+                <div className="flex items-start space-x-2">
+                  <div className="text-red-600 truncate flex-1" title={`Bridge Error: ${bridgeTransaction.error}`}>
+                    <span className="font-medium">Bridge:</span> {bridgeTransaction.error.length > 30 ? `${bridgeTransaction.error.substring(0, 30)}...` : bridgeTransaction.error}
+                  </div>
+                  <button
+                    onClick={() => copyToClipboard(bridgeTransaction.error!, 'Bridge error')}
+                    className="flex-shrink-0 p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
+                    title="Copy full bridge error message"
+                  >
+                    <ClipboardDocumentIcon className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
             </div>
           ) : '-'}
         </td>
