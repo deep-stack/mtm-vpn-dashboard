@@ -16,6 +16,7 @@ import { Decimal } from '@cosmjs/math';
 import Layout from '../../components/Layout';
 import dashboardApi, { ApiError, DashboardStats, TransactionData } from '../../utils/api';
 import { getExplorerUrl } from '../../utils/explorer';
+import { fetchGitHubReleases } from '../../utils/downloads';
 
 interface BalanceData {
   address: string;
@@ -28,6 +29,7 @@ export default function Dashboard() {
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [recentTransactions, setRecentTransactions] = useState<TransactionData[]>([]);
   const [accountBalances, setAccountBalances] = useState<BalanceData[]>([]);
+  const [totalDownloads, setTotalDownloads] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,10 +41,11 @@ export default function Dashboard() {
     try {
       setIsLoading(true);
       
-      // Fetch dashboard data (without balances)
-      const [statsData, conversionsData] = await Promise.allSettled([
+      // Fetch all dashboard data including downloads
+      const [statsData, conversionsData, downloadsData] = await Promise.allSettled([
         dashboardApi.getStats(),
-        dashboardApi.getConversions({ limit: 5, status: 'all' })
+        dashboardApi.getConversions({ limit: 5, status: 'all' }),
+        fetchGitHubReleases()
       ]);
 
       // Handle dashboard stats
@@ -55,6 +58,13 @@ export default function Dashboard() {
         }
       } else {
         console.error('Failed to fetch dashboard stats:', statsData.reason);
+      }
+
+      // Handle downloads data separately
+      if (downloadsData.status === 'fulfilled') {
+        setTotalDownloads(downloadsData.value.totalDownloads);
+      } else {
+        console.error('Failed to fetch downloads data:', downloadsData.reason);
       }
 
       // Handle recent transactions
@@ -177,7 +187,7 @@ export default function Dashboard() {
       {
         id: 4,
         name: 'Total Downloads',
-        stat: dashboardStats.totalDownloads.toLocaleString(),
+        stat: totalDownloads.toLocaleString(),
         icon: CloudArrowDownIcon,
       },
     ];

@@ -11,7 +11,6 @@ export interface DashboardStats {
   totalConversions: number;
   successfulConversions: number;
   failedConversions: number;
-  totalDownloads: number;
   monthlyData: MonthlyData[];
   walletAddresses: {
     eth?: string;
