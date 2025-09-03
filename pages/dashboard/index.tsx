@@ -8,12 +8,15 @@ import {
   XCircleIcon, 
   CloudArrowDownIcon,
   WalletIcon,
+  ArrowTopRightOnSquareIcon,
 } from '@heroicons/react/24/outline';
 import { StargateClient } from '@cosmjs/stargate';
 import { Decimal } from '@cosmjs/math';
 
 import Layout from '../../components/Layout';
 import dashboardApi, { ApiError, DashboardStats, TransactionData } from '../../utils/api';
+import { getExplorerUrl } from '../../utils/explorer';
+import { fetchGitHubReleases } from '../../utils/downloads';
 
 interface BalanceData {
   address: string;
@@ -26,6 +29,7 @@ export default function Dashboard() {
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [recentTransactions, setRecentTransactions] = useState<TransactionData[]>([]);
   const [accountBalances, setAccountBalances] = useState<BalanceData[]>([]);
+  const [totalDownloads, setTotalDownloads] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,10 +41,11 @@ export default function Dashboard() {
     try {
       setIsLoading(true);
       
-      // Fetch dashboard data (without balances)
-      const [statsData, conversionsData] = await Promise.allSettled([
+      // Fetch all dashboard data including downloads
+      const [statsData, conversionsData, downloadsData] = await Promise.allSettled([
         dashboardApi.getStats(),
-        dashboardApi.getConversions({ limit: 5, status: 'all' })
+        dashboardApi.getConversions({ limit: 5, status: 'all' }),
+        fetchGitHubReleases()
       ]);
 
       // Handle dashboard stats
@@ -53,6 +58,13 @@ export default function Dashboard() {
         }
       } else {
         console.error('Failed to fetch dashboard stats:', statsData.reason);
+      }
+
+      // Handle downloads data separately
+      if (downloadsData.status === 'fulfilled') {
+        setTotalDownloads(downloadsData.value.totalDownloads);
+      } else {
+        console.error('Failed to fetch downloads data:', downloadsData.reason);
       }
 
       // Handle recent transactions
@@ -175,7 +187,7 @@ export default function Dashboard() {
       {
         id: 4,
         name: 'Total Downloads',
-        stat: dashboardStats.totalDownloads.toLocaleString(),
+        stat: totalDownloads.toLocaleString(),
         icon: CloudArrowDownIcon,
       },
     ];
@@ -358,14 +370,36 @@ export default function Dashboard() {
                         )}
                       </div>
                       <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">
-                          {`${transaction.transactionHash.slice(0, 8)}...${transaction.transactionHash.slice(-8)}`}
+                        <div className="text-sm font-medium text-gray-900 flex items-center space-x-2">
+                          <a
+                            href={getExplorerUrl(transaction.transactionHash, 'solana')}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-800 font-mono"
+                          >
+                            {`${transaction.transactionHash.slice(0, 8)}...${transaction.transactionHash.slice(-8)}`}
+                          </a>
+                          <ArrowTopRightOnSquareIcon className="h-4 w-4 text-gray-400" />
                         </div>
                         <div className="text-sm text-gray-500">
-                          {transaction.error ? 
-                            `Error: ${transaction.error.substring(0, 40)}...` :
+                          {transaction.error ? (
+                            `Error: ${transaction.error.substring(0, 40)}...`
+                          ) : transaction.nymTransactionHash ? (
+                            <div className="flex items-center space-x-2">
+                              <span>NYM:</span>
+                              <a
+                                href={getExplorerUrl(transaction.nymTransactionHash, 'nym')}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:text-blue-800 font-mono text-xs"
+                              >
+                                {`${transaction.nymTransactionHash.slice(0, 8)}...${transaction.nymTransactionHash.slice(-8)}`}
+                              </a>
+                              <ArrowTopRightOnSquareIcon className="h-3 w-3 text-gray-400" />
+                            </div>
+                          ) : (
                             `From: ${transaction.fromAddress.slice(0, 8)}...${transaction.fromAddress.slice(-8)}`
-                          }
+                          )}
                         </div>
                       </div>
                     </div>

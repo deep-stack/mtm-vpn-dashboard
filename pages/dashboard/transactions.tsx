@@ -1,56 +1,76 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   CheckCircleIcon, 
   XCircleIcon,
   ArrowTopRightOnSquareIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  ClipboardDocumentIcon,
 } from '@heroicons/react/24/outline';
 import Layout from '../../components/Layout';
-import { mockTransactions, mockBridgeTransactions, mockSwapTransactions } from '../../data/mockData';
+import dashboardApi, { TransactionData, SwapData } from '../../utils/api';
+import { getExplorerUrl } from '../../utils/explorer';
+import { copyToClipboard } from '../../utils/clipboard';
 
 export default function Transactions() {
   const [mtmCurrentPage, setMtmCurrentPage] = useState(1);
   const [otherCurrentPage, setOtherCurrentPage] = useState(1);
+  const [mtmConversions, setMtmConversions] = useState<TransactionData[]>([]);
+  const [ethConversions, setEthConversions] = useState<SwapData[]>([]);
+  const [mtmTotalPages, setMtmTotalPages] = useState(1);
+  const [ethTotalPages, setEthTotalPages] = useState(1);
+  const [mtmLoading, setMtmLoading] = useState(true);
+  const [ethLoading, setEthLoading] = useState(true);
+  const [mtmError, setMtmError] = useState<string | null>(null);
+  const [ethError, setEthError] = useState<string | null>(null);
   const itemsPerPage = 5;
 
-  // MTM to NYM conversions (2-transaction structure: Solana + Nyx)
-  const mtmToNymConversions = mockTransactions.map(tx => ({ ...tx, type: 'MTM to NYM' as const }));
-  
-  // ETH to NYM conversions (each comprising of a Swap and Bridge tx)
-  const ethToNymConversions = mockBridgeTransactions.map((bridgeTx, index) => ({
-    id: `eth-nym-${bridgeTx.id}`,
-    bridgeTransaction: bridgeTx,
-    swapTransaction: mockSwapTransactions[index] || null, // Pair with corresponding swap
-    createdAt: bridgeTx.createdAt,
-    error: bridgeTx.error || (mockSwapTransactions[index]?.error || null),
-  })).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
+  useEffect(() => {
+    fetchMtmConversions();
+  }, [mtmCurrentPage]);
 
-  const getExplorerUrl = (hash: string, type: 'solana' | 'ethereum' | 'nym') => {
-    switch (type) {
-      case 'solana':
-        return `https://explorer.solana.com/tx/${hash}`;
-      case 'ethereum':
-        return `https://etherscan.io/tx/${hash}`;
-      case 'nym':
-        return `https://explorer.nyx.net/transactions/${hash}`;
-      default:
-        return '#';
+  useEffect(() => {
+    fetchEthConversions();
+  }, [otherCurrentPage]);
+
+  const fetchMtmConversions = async () => {
+    try {
+      setMtmLoading(true);
+      setMtmError(null);
+      const response = await dashboardApi.getConversions({
+        page: mtmCurrentPage,
+        limit: itemsPerPage,
+        status: 'all'
+      });
+      setMtmConversions(response.transactions);
+      setMtmTotalPages(response.pagination.totalPages);
+    } catch (error) {
+      console.error('Failed to fetch MTM conversions:', error);
+      setMtmError('Failed to load MTM conversions');
+    } finally {
+      setMtmLoading(false);
     }
   };
 
-  // Pagination logic for MTM conversions
-  const mtmTotalPages = Math.ceil(mtmToNymConversions.length / itemsPerPage);
-  const mtmStartIndex = (mtmCurrentPage - 1) * itemsPerPage;
-  const mtmEndIndex = mtmStartIndex + itemsPerPage;
-  const paginatedMtmConversions = mtmToNymConversions.slice(mtmStartIndex, mtmEndIndex);
-
-  // Pagination logic for ETH to NYM conversions
-  const ethTotalPages = Math.ceil(ethToNymConversions.length / itemsPerPage);
-  const ethStartIndex = (otherCurrentPage - 1) * itemsPerPage;
-  const ethEndIndex = ethStartIndex + itemsPerPage;
-  const paginatedEthConversions = ethToNymConversions.slice(ethStartIndex, ethEndIndex);
+  const fetchEthConversions = async () => {
+    try {
+      setEthLoading(true);
+      setEthError(null);
+      const response = await dashboardApi.getSwaps({
+        page: otherCurrentPage,
+        limit: itemsPerPage,
+        status: 'all'
+      });
+      setEthConversions(response.swaps);
+      setEthTotalPages(response.pagination.totalPages);
+    } catch (error) {
+      console.error('Failed to fetch ETH conversions:', error);
+      setEthError('Failed to load ETH conversions');
+    } finally {
+      setEthLoading(false);
+    }
+  };
 
   const renderPagination = (currentPage: number, totalPages: number, setCurrentPage: (page: number) => void) => {
     if (totalPages <= 1) return null;
@@ -153,8 +173,17 @@ export default function Transactions() {
 
         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
           {tx.error ? (
-            <div className="max-w-xs truncate text-red-600" title={tx.error}>
-              {tx.error}
+            <div className="max-w-xs flex items-start space-x-2">
+              <div className="truncate text-red-600 flex-1" title={tx.error}>
+                {tx.error}
+              </div>
+              <button
+                onClick={() => copyToClipboard(tx.error!, 'MTM conversion error')}
+                className="flex-shrink-0 p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
+                title="Copy full error message"
+              >
+                <ClipboardDocumentIcon className="h-4 w-4" />
+              </button>
             </div>
           ) : '-'}
         </td>
@@ -168,19 +197,20 @@ export default function Transactions() {
     );
   };
 
-  const renderEthConversionRow = (conversion: any, index: number) => {
-    const { bridgeTransaction, swapTransaction } = conversion;
+  const renderEthConversionRow = (swap: SwapData, index: number) => {
+    const { bridgeTransaction } = swap;
+    const hasError = swap.error || (bridgeTransaction?.error);
     return (
-      <tr key={conversion.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+      <tr key={swap.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
           <div className="flex items-center">
-            {conversion.error ? (
+            {hasError ? (
               <XCircleIcon className="h-5 w-5 text-red-400 mr-2" />
             ) : (
               <CheckCircleIcon className="h-5 w-5 text-green-400 mr-2" />
             )}
-            <span className={conversion.error ? 'text-red-600' : 'text-green-600'}>
-              {conversion.error ? 'Failed' : 'Success'}
+            <span className={hasError ? 'text-red-600' : 'text-green-600'}>
+              {hasError ? 'Failed' : 'Success'}
             </span>
           </div>
         </td>
@@ -188,13 +218,13 @@ export default function Transactions() {
         <td className="px-6 py-4 text-sm text-gray-500">
           <div className="space-y-3">
             {/* Swap Transaction */}
-            {swapTransaction && (
+            {swap && (
               <div>
                 <div className="flex items-center space-x-2 mb-1">
                   <span className="text-xs font-medium text-orange-600">Swap:</span>
-                  {swapTransaction.transactionHash && (
+                  {swap.transactionHash && (
                     <a
-                      href={getExplorerUrl(swapTransaction.transactionHash, 'ethereum')}
+                      href={getExplorerUrl(swap.transactionHash, 'ethereum')}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-blue-600 hover:text-blue-800"
@@ -204,41 +234,43 @@ export default function Transactions() {
                   )}
                 </div>
                 <div className="font-mono text-xs text-gray-600">
-                  {swapTransaction.transactionHash ? `${swapTransaction.transactionHash.slice(0, 12)}...${swapTransaction.transactionHash.slice(-12)}` : 'Pending...'}
+                  {swap.transactionHash ? `${swap.transactionHash.slice(0, 12)}...${swap.transactionHash.slice(-12)}` : 'Error during transaction'}
                 </div>
               </div>
             )}
             
             {/* Bridge Transaction */}
-            <div>
-              <div className="flex items-center space-x-2 mb-1">
-                <span className="text-xs font-medium text-green-600">Bridge:</span>
-                {bridgeTransaction.ethTransactionHash && (
-                  <a
-                    href={getExplorerUrl(bridgeTransaction.ethTransactionHash, 'ethereum')}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:text-blue-800"
-                  >
-                    <ArrowTopRightOnSquareIcon className="h-3 w-3" />
-                  </a>
-                )}
+            {bridgeTransaction && (
+              <div>
+                <div className="flex items-center space-x-2 mb-1">
+                  <span className="text-xs font-medium text-green-600">Bridge:</span>
+                  {bridgeTransaction.ethTransactionHash && (
+                    <a
+                      href={getExplorerUrl(bridgeTransaction.ethTransactionHash, 'ethereum')}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-800"
+                    >
+                      <ArrowTopRightOnSquareIcon className="h-3 w-3" />
+                    </a>
+                  )}
+                </div>
+                <div className="font-mono text-xs text-gray-600">
+                  {bridgeTransaction.ethTransactionHash ? `${bridgeTransaction.ethTransactionHash.slice(0, 12)}...${bridgeTransaction.ethTransactionHash.slice(-12)}` : 'Error during transaction'}
+                </div>
               </div>
-              <div className="font-mono text-xs text-gray-600">
-                {bridgeTransaction.ethTransactionHash ? `${bridgeTransaction.ethTransactionHash.slice(0, 12)}...${bridgeTransaction.ethTransactionHash.slice(-12)}` : 'Pending...'}
-              </div>
-            </div>
+            )}
           </div>
         </td>
 
         <td className="px-6 py-4 text-sm text-gray-500">
           <div className="space-y-1">
-            {swapTransaction && swapTransaction.ethAmount && (
+            {swap.ethAmount && (
               <div className="text-xs text-gray-600">
-                <span className="font-medium">ETH:</span> {swapTransaction.ethAmount}
+                <span className="font-medium">ETH:</span> {swap.ethAmount}
               </div>
             )}
-            {bridgeTransaction.nymAmount && (
+            {bridgeTransaction?.nymAmount && (
               <div className="text-xs text-gray-600">
                 <span className="font-medium">NYM:</span> {bridgeTransaction.nymAmount}
               </div>
@@ -247,16 +279,43 @@ export default function Transactions() {
         </td>
 
         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-          {conversion.error ? (
-            <div className="max-w-xs truncate text-red-600" title={conversion.error}>
-              {conversion.error}
+          {hasError ? (
+            <div className="max-w-xs space-y-1">
+              {swap.error && (
+                <div className="flex items-start space-x-2">
+                  <div className="text-red-600 truncate flex-1" title={`Swap Error: ${swap.error}`}>
+                    <span className="font-medium">Swap:</span> {swap.error.length > 30 ? `${swap.error.substring(0, 30)}...` : swap.error}
+                  </div>
+                  <button
+                    onClick={() => copyToClipboard(swap.error!, 'Swap error')}
+                    className="flex-shrink-0 p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
+                    title="Copy full swap error message"
+                  >
+                    <ClipboardDocumentIcon className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+              {bridgeTransaction?.error && (
+                <div className="flex items-start space-x-2">
+                  <div className="text-red-600 truncate flex-1" title={`Bridge Error: ${bridgeTransaction.error}`}>
+                    <span className="font-medium">Bridge:</span> {bridgeTransaction.error.length > 30 ? `${bridgeTransaction.error.substring(0, 30)}...` : bridgeTransaction.error}
+                  </div>
+                  <button
+                    onClick={() => copyToClipboard(bridgeTransaction.error!, 'Bridge error')}
+                    className="flex-shrink-0 p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
+                    title="Copy full bridge error message"
+                  >
+                    <ClipboardDocumentIcon className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
             </div>
           ) : '-'}
         </td>
 
         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
           <span suppressHydrationWarning>
-            {new Date(conversion.createdAt).toLocaleString()}
+            {new Date(swap.createdAt).toLocaleString()}
           </span>
         </td>
       </tr>
@@ -307,8 +366,20 @@ export default function Transactions() {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {paginatedMtmConversions.length > 0 ? (
-                        paginatedMtmConversions.map((tx, index) => renderMtmConversionRow(tx, index))
+                      {mtmLoading ? (
+                        <tr>
+                          <td colSpan={5} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                            Loading MTM conversions...
+                          </td>
+                        </tr>
+                      ) : mtmError ? (
+                        <tr>
+                          <td colSpan={5} className="px-6 py-4 whitespace-nowrap text-sm text-red-500 text-center">
+                            {mtmError}
+                          </td>
+                        </tr>
+                      ) : mtmConversions.length > 0 ? (
+                        mtmConversions.map((tx, index) => renderMtmConversionRow(tx, index))
                       ) : (
                         <tr>
                           <td colSpan={5} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
@@ -355,8 +426,20 @@ export default function Transactions() {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {paginatedEthConversions.length > 0 ? (
-                        paginatedEthConversions.map((conversion, index) => renderEthConversionRow(conversion, index))
+                      {ethLoading ? (
+                        <tr>
+                          <td colSpan={5} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                            Loading ETH conversions...
+                          </td>
+                        </tr>
+                      ) : ethError ? (
+                        <tr>
+                          <td colSpan={5} className="px-6 py-4 whitespace-nowrap text-sm text-red-500 text-center">
+                            {ethError}
+                          </td>
+                        </tr>
+                      ) : ethConversions.length > 0 ? (
+                        ethConversions.map((swap, index) => renderEthConversionRow(swap, index))
                       ) : (
                         <tr>
                           <td colSpan={5} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">

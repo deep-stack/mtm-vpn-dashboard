@@ -1,15 +1,40 @@
+import { useState, useEffect } from 'react';
 import { 
   CloudArrowDownIcon, 
   DevicePhoneMobileIcon,
   ArrowTopRightOnSquareIcon,
+  ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline';
+
 import Layout from '../../components/Layout';
-import { mockAppDownloads } from '../../data/mockData';
+import { ApiError } from '../../utils/api';
+import { fetchGitHubReleases, ProcessedRelease } from '../../utils/downloads';
 
 export default function Downloads() {
-  // Filter to only Android apps
-  const androidApps = mockAppDownloads.filter(app => app.platform === 'Android');
-  const totalDownloads = androidApps.reduce((sum, app) => sum + app.downloads, 0);
+  const [releases, setReleases] = useState<ProcessedRelease[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  useEffect(() => {
+    const loadReleases = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const { releases } = await fetchGitHubReleases();
+        setReleases(releases);
+      } catch (err) {
+        console.error('Failed to fetch releases:', err);
+        setError(err instanceof ApiError ? err.message : 'Failed to load release data');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadReleases();
+  }, []);
+  
+  const totalDownloads = releases.reduce((sum, release) => sum + release.downloads, 0);
 
   return (
     <Layout>
@@ -37,7 +62,13 @@ export default function Downloads() {
                       Total Downloads
                     </dt>
                     <dd className="text-lg font-medium text-gray-900">
-                      {totalDownloads.toLocaleString()}
+                      {loading ? (
+                        <div className="animate-pulse bg-gray-200 h-6 w-20 rounded"></div>
+                      ) : error ? (
+                        <span className="text-red-600">Error</span>
+                      ) : (
+                        totalDownloads.toLocaleString()
+                      )}
                     </dd>
                   </dl>
                 </div>
@@ -58,9 +89,6 @@ export default function Downloads() {
                         Version
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Platform
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Downloads
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -75,50 +103,96 @@ export default function Downloads() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {androidApps
-                      .sort((a, b) => new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime())
-                      .map((app, index) => (
-                        <tr key={app.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            {app.version}
+                    {loading ? (
+                      Array.from({ length: 3 }).map((_, index) => (
+                        <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="animate-pulse bg-gray-200 h-4 w-24 rounded"></div>
                           </td>
-                          
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            <div className="flex items-center">
-                              <DevicePhoneMobileIcon className="h-5 w-5 text-gray-400 mr-2" />
-                              {app.platform}
-                            </div>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="animate-pulse bg-gray-200 h-4 w-12 rounded"></div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="animate-pulse bg-gray-200 h-4 w-16 rounded"></div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="animate-pulse bg-gray-200 h-4 w-20 rounded"></div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="animate-pulse bg-gray-200 h-4 w-24 rounded"></div>
+                          </td>
+                        </tr>
+                      ))
+                    ) : error ? (
+                      <tr>
+                        <td colSpan={5} className="px-6 py-8 whitespace-nowrap text-sm text-gray-500 text-center">
+                          <div className="flex flex-col items-center">
+                            <ExclamationTriangleIcon className="h-12 w-12 text-red-400" />
+                            <h3 className="mt-2 text-sm font-medium text-gray-900">Error Loading Releases</h3>
+                            <p className="mt-1 text-sm text-red-600">{error}</p>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : releases.length > 0 ? (
+                      releases.map((release, index) => (
+                        <tr key={release.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {release.version}
                           </td>
 
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                             <span className="text-lg font-semibold">
-                              {app.downloads.toLocaleString()}
+                              {release.downloads.toLocaleString()}
                             </span>
                           </td>
 
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {app.fileSize}
+                            {release.fileSize}
                           </td>
 
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             <span suppressHydrationWarning>
-                              {app.releaseDate.toLocaleDateString()}
+                              {release.releaseDate.toLocaleDateString()}
                             </span>
                           </td>
 
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <a
-                              href={`https://git.vdb.to/cerc-io/mtm-vpn-client-public/releases/tag/${app.version}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-600 hover:text-blue-800 flex items-center"
-                            >
-                              View Release
-                              <ArrowTopRightOnSquareIcon className="ml-1 h-4 w-4" />
-                            </a>
+                            <div className="flex space-x-3">
+                              <a
+                                href={`https://git.vdb.to/cerc-io/mtm-vpn-client-public/releases/tag/${release.tagName}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:text-blue-800 flex items-center"
+                              >
+                                View Release
+                                <ArrowTopRightOnSquareIcon className="ml-1 h-4 w-4" />
+                              </a>
+                              <a
+                                href={release.downloadUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-green-600 hover:text-green-800 flex items-center"
+                              >
+                                Download APK
+                                <CloudArrowDownIcon className="ml-1 h-4 w-4" />
+                              </a>
+                            </div>
                           </td>
                         </tr>
-                      ))}
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={5} className="px-6 py-8 whitespace-nowrap text-sm text-gray-500 text-center">
+                          <div className="flex flex-col items-center">
+                            <DevicePhoneMobileIcon className="h-12 w-12 text-gray-400" />
+                            <h3 className="mt-2 text-sm font-medium text-gray-900">No Releases Found</h3>
+                            <p className="mt-1 text-sm text-gray-500">
+                              No Android app releases are currently available.
+                            </p>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>

@@ -12,8 +12,7 @@ echo "Using AUTHORITY: $AUTHORITY"
 REPO_URL="https://git.vdb.to/cerc-io/mtm-vpn-dashboard"
 
 # Get the latest commit hash for a branch
-# TODO: Change to main branch when ready
-BRANCH_NAME="ng-deploy-laconic"
+BRANCH_NAME="main"
 LATEST_HASH=$(git ls-remote $REPO_URL refs/heads/$BRANCH_NAME | awk '{print $1}')
 
 # Gitea
